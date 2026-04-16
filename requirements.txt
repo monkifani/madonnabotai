@@ -1,0 +1,8 @@
+python-telegram-bot[job-queue]==20.8
+google-generativeai==0.3.2
+apscheduler==3.10.4
+sqlalchemy==2.0.25
+pillow==10.2.0
+python-dotenv==1.0.0
+httpx==0.26.0
+pytz==2024.1

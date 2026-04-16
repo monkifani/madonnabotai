@@ -6,6 +6,7 @@ from utils.text_messages import FOOD_ANALYSIS_TEMPLATE
 from utils.disclaimers import DISCLAIMER_FOOD
 from config import GOOGLE_API_KEY, GEMINI_MODEL
 import google.generativeai as genai
+from datetime import datetime
 
 genai.configure(api_key=GOOGLE_API_KEY)
 
@@ -14,7 +15,7 @@ async def handle_food_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Пользователь прислал фото еды"""
     user = get_user(update.effective_user.id)
     if not user:
-        await update.message.reply_text("Сначала зарегистрируйтесь — /start")
+        await update.message.reply_text("Сначала зарегистрируйся — /start")
         return
     
     photo = update.message.photo[-1]
@@ -25,17 +26,22 @@ async def handle_food_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await photo_file.download_to_drive(tmp.name)
         
         model = genai.GenerativeModel(GEMINI_MODEL)
+        
+        # Подставляем возраст пользователя для персонификации
         prompt = FOOD_ANALYZER_PROMPT.format(
             input_type="фото",
-            user_input="Посмотри на это фото и опиши блюдо"
+            user_input="Посмотри на это фото и опиши блюдо",
+            user_age=user.age
         )
         
         from PIL import Image
         image = Image.open(tmp.name)
         response = model.generate_content([prompt, image])
         
+    # Парсим детальный ответ
     analysis = parse_food_response(response.text)
     
+    # Сохраняем в БД
     add_food(
         tg_id=user.tg_id,
         description=analysis.get('description', 'Неизвестно'),
@@ -44,8 +50,11 @@ async def handle_food_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         advice=analysis.get('advice', ''),
     )
     
+    # Формируем ответ для пользователя
+    meal_type = "обед" if datetime.now().hour < 15 else "ужин"
+    
     message = FOOD_ANALYSIS_TEMPLATE.format(
-        meal_type="обед" if datetime.now().hour < 15 else "ужин",
+        meal_type=meal_type,
         analysis=analysis.get('description', ''),
         advice=analysis.get('advice', ''),
         calories=analysis.get('calories', 0),
@@ -59,7 +68,7 @@ async def handle_food_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Пользователь написал текстом что ел"""
     user = get_user(update.effective_user.id)
     if not user:
-        await update.message.reply_text("Сначала зарегистрируйтесь — /start")
+        await update.message.reply_text("Сначала зарегистрируйся — /start")
         return
     
     text = update.message.text
@@ -67,7 +76,8 @@ async def handle_food_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     model = genai.GenerativeModel(GEMINI_MODEL)
     prompt = FOOD_ANALYZER_PROMPT.format(
         input_type="текст",
-        user_input=text
+        user_input=text,
+        user_age=user.age
     )
     
     response = model.generate_content(prompt)
@@ -97,6 +107,7 @@ def parse_food_response(response_text):
     result = {}
     
     for line in lines:
+        line = line.strip()
         if line.startswith('ОПИСАНИЕ:'):
             result['description'] = line.replace('ОПИСАНИЕ:', '').strip()
         elif line.startswith('КАЛОРИИ:'):
@@ -106,7 +117,7 @@ def parse_food_response(response_text):
                 result['calories'] = 0
         elif line.startswith('СОВЕТ:'):
             result['advice'] = line.replace('СОВЕТ:', '').strip()
-        elif line.startswith('ОТЁКИ:'):
-            result['swelling'] = line.replace('ОТЁКИ:', '').strip()
+        elif line.startswith('ОТЕКИ:'):
+            result['swelling'] = line.replace('ОТЕКИ:', '').strip()
     
     return result

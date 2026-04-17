@@ -1,10 +1,10 @@
 python-telegram-bot[job-queue]==20.8
-google-generativeai==0.3.2
+google-generativeai==0.5.4
 apscheduler==3.10.4
-sqlalchemy==2.0.25
+sqlalchemy==2.0.32
 pillow==10.4.0
-python-dotenv==1.0.0
-httpx==0.26.0
-pytz==2024.1
-setuptools>=68.0.0
-wheel>=0.40.0
+python-dotenv==1.0.1
+httpx==0.27.2
+pytz==2024.2
+setuptools>=70.0.0
+wheel>=0.43.0

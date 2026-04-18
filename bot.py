@@ -1,27 +1,24 @@
 #!/usr/bin/env python3
 """
 MADONNA Bot — Personal AI Assistant for Beauty & Health
-Version: 2.0.2
+Version: 2.0.3
 """
 
 # =============================================================================
 # СЕКЦИЯ 1: ИМПОРТЫ И НАСТРОЙКА ОКРУЖЕНИЯ
 # =============================================================================
 
-# Импорт стандартной библиотеки Python
 import os
 import asyncio
 import datetime
 import logging
-import logging.handlers  # Исправление: импортируем handlers отдельно
+import logging.handlers
 import pytz
 import tempfile
 import io
 
-# Импорт для работы с изображениями
-from PIL import Image  # Исправление: импортируем Image из Pillow
+from PIL import Image
 
-# Импорт основных классов python-telegram-bot
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
@@ -34,18 +31,16 @@ from telegram.ext import (
     JobQueue,
 )
 
-# Импорт Google Gemini API
 import google.generativeai as genai
 
-# Импорт моделей базы данных SQLAlchemy
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# ... остальной код остаётся без изменений ...
+# =============================================================================
+# СЕКЦИЯ 2: КОНФИГУРАЦИЯ ЛОГИРОВАНИЯ
+# =============================================================================
 
-# ... остальной код остаётся без изменений ...
-# Настройка логирования
 if not os.path.exists('logs'):
     os.makedirs('logs')
 
@@ -61,73 +56,68 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ... остальной код остаётся без изменений ...
-
 # =============================================================================
 # СЕКЦИЯ 3: ИМПОРТ МОДУЛЕЙ ПРОЕКТА
 # =============================================================================
 
-# Импорт конфигурации (токены, ключи, настройки)
 from config import (
-    BOT_TOKEN,  # Токен Telegram бота
-    GOOGLE_API_KEY,  # Ключ Google Gemini API
-    ADMIN_IDS,  # Список ID администраторов
-    GEMINI_MODEL,  # Модель Gemini (gemini-1.5-flash)
-    DATABASE_URL,  # URL базы данных
-    WATER_TIMES,  # Время напоминаний о воде
-    FOOD_TIMES,  # Время напоминаний о еде
-    SUB_PRICE,  # Цена подписки
+    BOT_TOKEN,
+    GOOGLE_API_KEY,
+    ADMIN_IDS,
+    GEMINI_MODEL,
+    DATABASE_URL,
+    WATER_TIMES,
+    FOOD_TIMES,
+    SUB_PRICE,
 )
-# Импорт моделей базы данных
+
 from database import (
-    init_db,  # Инициализация базы
-    get_user,  # Получить пользователя
-    create_user,  # Создать пользователя
-    update_user,  # Обновить пользователя
-    add_food,  # Добавить запись еды
-    add_water,  # Добавить запись воды
-    add_face_scan,  # Добавить скан лица
-    get_today_food,  # Получить сегодняшнюю еду
-    get_today_water,  # Получить сегодняшнюю воду
+    init_db,
+    get_user,
+    create_user,
+    update_user,
+    add_food,
+    add_water,
+    add_face_scan,
+    get_today_food,
+    get_today_water,
 )
-# Импорт текстовых сообщений
+
 from utils.text_messages import (
-    WELCOME,  # Приветственное сообщение
-    MAIN_MENU,  # Главное меню
-    BUTTONS,  # Кнопки
-    WATER_REMINDERS,  # Напоминания о воде
-    FOOD_REMINDERS,  # Напоминания о еде
-    FOOD_ANALYSIS_TEMPLATE,  # Шаблон анализа еды
-    FACE_ANALYSIS_TEMPLATE,  # Шаблон анализа лица
+    WELCOME,
+    MAIN_MENU,
+    BUTTONS,
+    WATER_REMINDERS,
+    FOOD_REMINDERS,
+    FOOD_ANALYSIS_TEMPLATE,
+    FACE_ANALYSIS_TEMPLATE,
 )
-# Импорт промптов для ИИ
+
 from utils.prompts import (
-    FOOD_ANALYZER_PROMPT,  # Промпт анализа еды
-    FACE_ANALYZER_PROMPT,  # Промпт анализа лица
-    REMINDER_GENERATOR_PROMPT,  # Промпт генерации напоминаний
+    FOOD_ANALYZER_PROMPT,
+    FACE_ANALYZER_PROMPT,
+    REMINDER_GENERATOR_PROMPT,
 )
-# Импорт дисклеймеров
+
 from utils.disclaimers import (
-    DISCLAIMER_START,  # Дисклеймер при старте
-    DISCLAIMER_SHORT,  # Короткий дисклеймер
-    DISCLAIMER_FOOD,  # Дисклеймер для еды
-    DISCLAIMER_FACE,  # Дисклеймер для лица
+    DISCLAIMER_START,
+    DISCLAIMER_SHORT,
+    DISCLAIMER_FOOD,
+    DISCLAIMER_FACE,
 )
-# Импорт вспомогательных функций
+
 from utils.helpers import (
-    now_msk,  # Текущее время в МСК
-    time_to_utc,  # Конвертация времени
-    calculate_calorie_norm,  # Расчёт калорий
-    get_water_glasses,  # Сколько стаканов воды
-    get_food_status,  # Статус питания
+    now_msk,
+    time_to_utc,
+    calculate_calorie_norm,
+    get_water_glasses,
+    get_food_status,
 )
 
 # =============================================================================
 # СЕКЦИЯ 4: ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И КОНСТАНТЫ
 # =============================================================================
 
-# Состояния ConversationHandler для регистрации
-# Каждое состояние — это шаг в многошаговом диалоге
 ASK_NAME, ASK_AGE, ASK_HEIGHT, ASK_WEIGHT, ASK_CONCERNS, ASK_WAKE_TIME, ASK_SLEEP_TIME, ASK_FACE_PHOTO, SHOW_DISCLAIMER, ACCEPT = range(10)
 
 # =============================================================================
@@ -137,263 +127,76 @@ ASK_NAME, ASK_AGE, ASK_HEIGHT, ASK_WEIGHT, ASK_CONCERNS, ASK_WAKE_TIME, ASK_SLEE
 class MadonnaBot:
     """
     Главный класс бота MADONNA. Содержит всю логику работы.
-    ООП подход позволяет легко тестировать и масштабировать.
     """
     
     def __init__(self, token: str, gemini_key: str):
-        """
-        Инициализация бота. Создаёт Application и настраивает Gemini.
-        
-        Args:
-            token: Telegram Bot Token
-            gemini_key: Google Gemini API Key
-        """
-        # Создаём Application — сердце бота python-telegram-bot
         self.app = Application.builder().token(token).build()
-        
-        # Настраиваем Google Gemini
         genai.configure(api_key=gemini_key)
         self.gemini_model = genai.GenerativeModel(GEMINI_MODEL)
-        
-        # Инициализируем базу данных
         init_db()
         logger.info("Database initialized successfully")
-        
-        # Регистрируем все обработчики команд и сообщений
         self._register_handlers()
-        
-        # Настраиваем планировщик задач
         self._setup_scheduler()
-        
         logger.info("MadonnaBot initialized and ready to start")
     
     def _register_handlers(self):
-        """
-        Регистрация ВСЕХ обработчиков команд и сообщений.
-        Порядок регистрации ВАЖЕН: более специфичные handlers должны быть выше.
-        """
         logger.info("Registering handlers...")
-        
-        # 1. Обработчик команды /start — многошаговая регистрация
-        # Используем ConversationHandler для создания визарда
         self.app.add_handler(self._get_start_conversation_handler())
-        logger.info("✓ Start handler registered")
-        
-        # 2. Обработчик команды /menu — показ главного меню
         self.app.add_handler(CommandHandler("menu", self._show_main_menu))
-        logger.info("✓ Menu handler registered")
-        
-        # 3. Обработчик команды /help — помощь
         self.app.add_handler(CommandHandler("help", self._show_help))
-        logger.info("✓ Help handler registered")
-        
-        # 4. Обработчик команды /cancel — отмена действия
         self.app.add_handler(CommandHandler("cancel", self._cancel_action))
-        logger.info("✓ Cancel handler registered")
-        
-        # 5. Обработчик команды /profile — показ профиля
         self.app.add_handler(CommandHandler("profile", self._show_profile))
-        logger.info("✓ Profile handler registered")
-        
-        # 6. Обработчик команды /progress — показ прогресса
-        self.app.add_handler(CommandHandler("progress", self._show_progress))
-        logger.info("✓ Progress handler registered")
-        
-        # 7. Обработчик команды /stats — статистика для админа
-        # Только для пользователей из списка ADMIN_IDS
         self.app.add_handler(
-            CommandHandler(
-                "stats", 
-                self._admin_stats,
-                filters=filters.User(user_id=ADMIN_IDS)
-            )
+            CommandHandler("stats", self._admin_stats, filters=filters.User(user_id=ADMIN_IDS))
         )
-        logger.info("✓ Admin stats handler registered")
-        
-        # 8. Обработчик команды /broadcast — рассылка админу
         self.app.add_handler(
-            CommandHandler(
-                "broadcast",
-                self._admin_broadcast,
-                filters=filters.User(user_id=ADMIN_IDS)
-            )
+            CommandHandler("broadcast", self._admin_broadcast, filters=filters.User(user_id=ADMIN_IDS))
         )
-        logger.info("✓ Admin broadcast handler registered")
-        
-        # 9. Обработчик текстовых сообщений (если не команда)
-        # Используется для анализа еды текстом
-        self.app.add_handler(
-            MessageHandler(
-                filters.TEXT & ~filters.COMMAND,
-                self._handle_food_text
-            )
-        )
-        logger.info("✓ Food text handler registered")
-        
-        # 10. Обработчик фото (для еды и лица)
-        # ~filters.FORWARDED — игнорируем пересланные фото
-        self.app.add_handler(
-            MessageHandler(
-                filters.PHOTO & ~filters.FORWARDED,
-                self._handle_photo
-            )
-        )
-        logger.info("✓ Photo handler registered")
-        
-        # 11. Обработчик нажатий кнопок (inline keyboards)
-        # Колбэки начинаются с water_, food_, face_, profile_, premium_
-        self.app.add_handler(
-            CallbackQueryHandler(
-                self._handle_callback,
-                pattern="^(water_|food_|face_|profile_|premium_)"
-            )
-        )
-        logger.info("✓ Callback handler registered")
-        
-        # 12. Обработчик всех остальных callback'ов (на всякий случай)
+        self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self._handle_food_text))
+        self.app.add_handler(MessageHandler(filters.PHOTO & ~filters.FORWARDED, self._handle_photo))
+        self.app.add_handler(CallbackQueryHandler(self._handle_callback, pattern="^(water_|food_|face_|profile_|premium_)"))
         self.app.add_handler(CallbackQueryHandler(self._handle_unknown_callback))
-        logger.info("✓ Unknown callback handler registered")
-        
-        # 13. Обработчик ошибок (если callback вызвал исключение)
         self.app.add_error_handler(self._error_handler)
-        logger.info("✓ Error handler registered")
-        
         logger.info("All handlers registered successfully")
     
     def _setup_scheduler(self):
-        """
-        Настройка планировщика задач APScheduler.
-        Запускает напоминания о воде, еде, сне.
-        """
         logger.info("Setting up scheduler...")
-        
         job_queue: JobQueue = self.app.job_queue
-        
-        # Напоминания о воде (9 раз в день)
         for i, water_time in enumerate(WATER_TIMES):
-            # Конвертируем время МСК в UTC для планировщика
             utc_time = time_to_utc(water_time)
-            job_queue.run_daily(
-                self._send_water_reminder,
-                time=datetime.time.fromisoformat(utc_time),
-                name=f"water_reminder_{i}",
-                chat_id=None,  # Будет определён внутри функции
-            )
-            logger.info(f"✓ Water reminder scheduled at {water_time} MSK ({utc_time} UTC)")
-        
-        # Напоминания о еде (4 раза в день)
+            job_queue.run_daily(self._send_water_reminder, time=datetime.time.fromisoformat(utc_time), name=f"water_{i}", chat_id=None)
         for i, food_time in enumerate(FOOD_TIMES):
             utc_time = time_to_utc(food_time)
-            job_queue.run_daily(
-                self._send_food_reminder,
-                time=datetime.time.fromisoformat(utc_time),
-                name=f"food_reminder_{i}",
-                chat_id=None,
-            )
-            logger.info(f"✓ Food reminder scheduled at {food_time} MSK ({utc_time} UTC)")
-        
-        # Напоминание о сне (за 30 минут до сна)
-        sleep_time_utc = time_to_utc("20:30")  # 20:30 MSK
-        job_queue.run_daily(
-            self._send_sleep_reminder,
-            time=datetime.time.fromisoformat(sleep_time_utc),
-            name="sleep_reminder",
-            chat_id=None,
-        )
-        logger.info(f"✓ Sleep reminder scheduled at 20:30 MSK")
-        
-        # Еженедельный отчёт (воскресенье в 20:00 МСК)
-        report_time_utc = time_to_utc("20:00")
-        job_queue.run_daily(
-            self._send_weekly_report,
-            time=datetime.time.fromisoformat(report_time_utc),
-            days=(6,),  # 6 = воскресенье (0=понедельник)
-            name="weekly_report",
-            chat_id=None,
-        )
-        logger.info(f"✓ Weekly report scheduled for Sundays at 20:00 MSK")
-        
+            job_queue.run_daily(self._send_food_reminder, time=datetime.time.fromisoformat(utc_time), name=f"food_{i}", chat_id=None)
+        utc_time = time_to_utc("20:30")
+        job_queue.run_daily(self._send_sleep_reminder, time=datetime.time.fromisoformat(utc_time), name="sleep", chat_id=None)
         logger.info("Scheduler setup completed")
     
-       def _get_start_conversation_handler(self) -> ConversationHandler:
+    def _get_start_conversation_handler(self) -> ConversationHandler:
         """
         Создаёт и возвращает ConversationHandler для многошаговой регистрации.
         """
         return ConversationHandler(
             entry_points=[CommandHandler("start", self._cmd_start)],
             states={
-                SHOW_DISCLAIMER: [
-                    CallbackQueryHandler(
-                        self._show_disclaimer,
-                        pattern="^start_registration$"
-                    )
-                ],
+                SHOW_DISCLAIMER: [CallbackQueryHandler(self._show_disclaimer, pattern="^start_registration$")],
                 ACCEPT: [
-                    CallbackQueryHandler(
-                        self._accept_disclaimer,
-                        pattern="^accept_disclaimer$"
-                    ),
-                    CallbackQueryHandler(
-                        self._decline_disclaimer,
-                        pattern="^decline_disclaimer$"
-                    ),
+                    CallbackQueryHandler(self._accept_disclaimer, pattern="^accept_disclaimer$"),
+                    CallbackQueryHandler(self._decline_disclaimer, pattern="^decline_disclaimer$"),
                 ],
-                ASK_NAME: [
-                    MessageHandler(
-                        filters.TEXT & ~filters.COMMAND,
-                        self._ask_name
-                    )
-                ],
-                ASK_AGE: [
-                    MessageHandler(
-                        filters.TEXT & ~filters.COMMAND,
-                        self._ask_age
-                    )
-                ],
-                ASK_HEIGHT: [
-                    MessageHandler(
-                        filters.TEXT & ~filters.COMMAND,
-                        self._ask_height
-                    )
-                ],
-                ASK_WEIGHT: [
-                    MessageHandler(
-                        filters.TEXT & ~filters.COMMAND,
-                        self._ask_weight
-                    )
-                ],
+                ASK_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, self._ask_name)],
+                ASK_AGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, self._ask_age)],
+                ASK_HEIGHT: [MessageHandler(filters.TEXT & ~filters.COMMAND, self._ask_height)],
+                ASK_WEIGHT: [MessageHandler(filters.TEXT & ~filters.COMMAND, self._ask_weight)],
                 ASK_CONCERNS: [
-                    CallbackQueryHandler(
-                        self._ask_concerns,
-                        pattern="^concern_"
-                    ),
-                    MessageHandler(
-                        filters.Regex("(?i)^готово$"),
-                        self._finish_concerns
-                    ),
+                    CallbackQueryHandler(self._ask_concerns, pattern="^concern_"),
+                    MessageHandler(filters.Regex("(?i)^готово$"), self._finish_concerns),
                 ],
-                ASK_WAKE_TIME: [
-                    MessageHandler(
-                        filters.TEXT & ~filters.COMMAND,
-                        self._ask_wake_time
-                    )
-                ],
-                ASK_SLEEP_TIME: [
-                    MessageHandler(
-                        filters.TEXT & ~filters.COMMAND,
-                        self._ask_sleep_time
-                    )
-                ],
-                ASK_FACE_PHOTO: [
-                    MessageHandler(
-                        filters.PHOTO,
-                        self._ask_face_photo
-                    )
-                ],
+                ASK_WAKE_TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, self._ask_wake_time)],
+                ASK_SLEEP_TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, self._ask_sleep_time)],
+                ASK_FACE_PHOTO: [MessageHandler(filters.PHOTO, self._ask_face_photo)],
             },
-            fallbacks=[
-                CommandHandler("cancel", self._cancel_registration)
-            ],
+            fallbacks=[CommandHandler("cancel", self._cancel_registration)],
             name="registration",
             persistent=False,
             per_user=True,

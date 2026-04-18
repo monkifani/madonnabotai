@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 MADONNA Bot — Personal AI Assistant for Beauty & Health
-Version: 2.0.3
+Version: 2.0.4
 """
 
 # =============================================================================
@@ -16,6 +16,7 @@ import logging.handlers
 import pytz
 import tempfile
 import io
+import traceback  # Добавлен для обработки ошибок
 
 from PIL import Image
 
@@ -81,6 +82,7 @@ from database import (
     add_face_scan,
     get_today_food,
     get_today_water,
+    get_last_face_scan,
 )
 
 from utils.text_messages import (
@@ -202,6 +204,7 @@ class MadonnaBot:
             per_user=True,
             per_message=False,
         )
+    
     # =============================================================================
     # СЕКЦИЯ 6: ОБРАБОТЧИКИ КОМАНД
     # =============================================================================
@@ -1222,6 +1225,7 @@ class MadonnaBot:
         """
         logger.info("Running food reminder job")
         
+        # Получаем всех активных пользователей
         users = get_all_active_users()
         
         for user in users:
@@ -1256,6 +1260,7 @@ class MadonnaBot:
         """
         logger.info("Running sleep reminder job")
         
+        # Получаем всех активных пользователей
         users = get_all_active_users()
         
         for user in users:
@@ -1283,6 +1288,7 @@ class MadonnaBot:
         """
         logger.info("Running weekly report job")
         
+        # Получаем всех активных пользователей
         users = get_all_active_users()
         
         for user in users:
@@ -1424,7 +1430,6 @@ class MadonnaBot:
         logger.error(f"Exception while handling update: {context.error}")
         
         # Логируем traceback
-        import traceback
         logger.error(traceback.format_exc())
         
         # Отправляем уведомление админу (первому в списке)

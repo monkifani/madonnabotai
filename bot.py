@@ -315,7 +315,7 @@ class MadonnaBot:
         
         logger.info("Scheduler setup completed")
     
-   def _get_start_conversation_handler(self) -> ConversationHandler:
+       def _get_start_conversation_handler(self) -> ConversationHandler:
         """
         Создаёт и возвращает ConversationHandler для многошаговой регистрации.
         """

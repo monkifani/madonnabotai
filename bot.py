@@ -1,16 +1,27 @@
 #!/usr/bin/env python3
 """
 MADONNA Bot — Personal AI Assistant for Beauty & Health
-Version: 2.0.1
+Version: 2.0.2
 """
 
+# =============================================================================
+# СЕКЦИЯ 1: ИМПОРТЫ И НАСТРОЙКА ОКРУЖЕНИЯ
+# =============================================================================
+
+# Импорт стандартной библиотеки Python
 import os
 import asyncio
 import datetime
 import logging
-import logging.handlers
+import logging.handlers  # Исправление: импортируем handlers отдельно
 import pytz
+import tempfile
+import io
 
+# Импорт для работы с изображениями
+from PIL import Image  # Исправление: импортируем Image из Pillow
+
+# Импорт основных классов python-telegram-bot
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
@@ -22,6 +33,16 @@ from telegram.ext import (
     ConversationHandler,
     JobQueue,
 )
+
+# Импорт Google Gemini API
+import google.generativeai as genai
+
+# Импорт моделей базы данных SQLAlchemy
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, Text
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+
+# ... остальной код остаётся без изменений ...
 
 # ... остальной код остаётся без изменений ...
 # Настройка логирования

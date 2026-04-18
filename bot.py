@@ -1,72 +1,37 @@
 #!/usr/bin/env python3
 """
 MADONNA Bot — Personal AI Assistant for Beauty & Health
-Production-ready Telegram bot for women 45-70 years old in CIS region
-Version: 2.0.0
-Author: AI Architecture Team
 """
 
-# =============================================================================
-# СЕКЦИЯ 1: ИМПОРТЫ И НАСТРОЙКА ОКРУЖЕНИЯ
-# =============================================================================
-
-# Импорт стандартной библиотеки Python для работы с операционной системой
 import os
-# Импорт для работы с асинхронными операциями (все handlers асинхронные)
 import asyncio
-# Импорт для работы с временем и датами
 import datetime
-# Импорт для логирования ошибок и событий
 import logging
-# Импорт для работы с временными зонами (МСК/UTC)
+import logging.handlers  # ← ДОБАВИТЬ ЭТУ СТРОКУ!
 import pytz
-# Импорт для работы с базой данных SQLAlchemy
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, Text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-# Импорт основных классов python-telegram-bot
-from telegram import Update, User as TelegramUser, Message, CallbackQuery
-from telegram.ext import (
-    Application,  # Основной класс приложения бота
-    CommandHandler,  # Обработчик команд (/start, /help)
-    MessageHandler,  # Обработчик сообщений (текст, фото)
-    CallbackQueryHandler,  # Обработчик нажатий кнопок
-    ConversationHandler,  # Обработчик многошаговых диалогов
-    ContextTypes,  # Типы контекста для type hints
-    filters,  # Фильтры для сообщений
-    JobQueue,  # Планировщик задач
-)
-# Импорт Google Gemini API
+from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import google.generativeai as genai
-# Импорт для работы с изображениями
 from PIL import Image
-# Импорт для временных файлов (скачивание фото)
 import tempfile
-# Импорт для работы с файлами
-import io
 
-# =============================================================================
-# СЕКЦИЯ 2: КОНФИГУРАЦИЯ ЛОГИРОВАНИЯ
-# =============================================================================
-
-# Создаём директорию для логов, если её нет
+# Настройка логирования
 if not os.path.exists('logs'):
     os.makedirs('logs')
 
-# Настройка формата логов: время - имя - уровень - сообщение
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO,  # Уровень INFO для продакшена (DEBUG для разработки)
+    level=logging.INFO,
     handlers=[
-        # Логи в файл (ротация каждый день, храним 30 дней)
         logging.handlers.TimedRotatingFileHandler(
             'logs/madonna.log', when='midnight', interval=1, backupCount=30
         ),
-        # Логи в консоль
         logging.StreamHandler()
     ]
 )
-logger = logging.getLogger(__name__)  # Создаём логгер для этого модуля
+logger = logging.getLogger(__name__)
+
+# ... остальной код остаётся без изменений ...
 
 # =============================================================================
 # СЕКЦИЯ 3: ИМПОРТ МОДУЛЕЙ ПРОЕКТА

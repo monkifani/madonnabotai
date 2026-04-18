@@ -315,52 +315,90 @@ class MadonnaBot:
         
         logger.info("Scheduler setup completed")
     
-    def _get_start_conversation_handler(self) -> ConversationHandler:
-    """
-    Создаёт и возвращает ConversationHandler для многошаговой регистрации.
-    """
-    return ConversationHandler(
-        entry_points=[CommandHandler("start", self._cmd_start)],
-        states={
-            ASK_NAME: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, self._ask_name)
+   def _get_start_conversation_handler(self) -> ConversationHandler:
+        """
+        Создаёт и возвращает ConversationHandler для многошаговой регистрации.
+        """
+        return ConversationHandler(
+            entry_points=[CommandHandler("start", self._cmd_start)],
+            states={
+                SHOW_DISCLAIMER: [
+                    CallbackQueryHandler(
+                        self._show_disclaimer,
+                        pattern="^start_registration$"
+                    )
+                ],
+                ACCEPT: [
+                    CallbackQueryHandler(
+                        self._accept_disclaimer,
+                        pattern="^accept_disclaimer$"
+                    ),
+                    CallbackQueryHandler(
+                        self._decline_disclaimer,
+                        pattern="^decline_disclaimer$"
+                    ),
+                ],
+                ASK_NAME: [
+                    MessageHandler(
+                        filters.TEXT & ~filters.COMMAND,
+                        self._ask_name
+                    )
+                ],
+                ASK_AGE: [
+                    MessageHandler(
+                        filters.TEXT & ~filters.COMMAND,
+                        self._ask_age
+                    )
+                ],
+                ASK_HEIGHT: [
+                    MessageHandler(
+                        filters.TEXT & ~filters.COMMAND,
+                        self._ask_height
+                    )
+                ],
+                ASK_WEIGHT: [
+                    MessageHandler(
+                        filters.TEXT & ~filters.COMMAND,
+                        self._ask_weight
+                    )
+                ],
+                ASK_CONCERNS: [
+                    CallbackQueryHandler(
+                        self._ask_concerns,
+                        pattern="^concern_"
+                    ),
+                    MessageHandler(
+                        filters.Regex("(?i)^готово$"),
+                        self._finish_concerns
+                    ),
+                ],
+                ASK_WAKE_TIME: [
+                    MessageHandler(
+                        filters.TEXT & ~filters.COMMAND,
+                        self._ask_wake_time
+                    )
+                ],
+                ASK_SLEEP_TIME: [
+                    MessageHandler(
+                        filters.TEXT & ~filters.COMMAND,
+                        self._ask_sleep_time
+                    )
+                ],
+                ASK_FACE_PHOTO: [
+                    MessageHandler(
+                        filters.PHOTO,
+                        self._ask_face_photo
+                    )
+                ],
+            },
+            fallbacks=[
+                CommandHandler("cancel", self._cancel_registration)
             ],
-            ASK_AGE: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, self._ask_age)
-            ],
-            ASK_HEIGHT: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, self._ask_height)
-            ],
-            ASK_WEIGHT: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, self._ask_weight)
-            ],
-            ASK_CONCERNS: [
-                CallbackQueryHandler(self._ask_concerns, pattern="^concern_"),
-                MessageHandler(filters.Regex("(?i)^готово$"), self._finish_concerns),
-            ],
-            ASK_WAKE_TIME: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, self._ask_wake_time)
-            ],
-            ASK_SLEEP_TIME: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, self._ask_sleep_time)
-            ],
-            ASK_FACE_PHOTO: [
-                MessageHandler(filters.PHOTO, self._ask_face_photo)
-            ],
-            SHOW_DISCLAIMER: [
-                CallbackQueryHandler(self._show_disclaimer, pattern="^start_registration$")
-            ],
-            ACCEPT: [
-                CallbackQueryHandler(self._accept_disclaimer, pattern="^accept_disclaimer$"),
-                CallbackQueryHandler(self._decline_disclaimer, pattern="^decline_disclaimer$"),
-            ],
-        },
-        fallbacks=[CommandHandler("cancel", self._cancel_registration)],
-        name="registration",
-        persistent=False,
-        per_user=True,
-        per_message=False,
-    )
+            name="registration",
+            persistent=False,
+            per_user=True,
+            per_message=False,
+        )
     # =============================================================================
     # СЕКЦИЯ 6: ОБРАБОТЧИКИ КОМАНД
     # =============================================================================

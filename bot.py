@@ -1,20 +1,29 @@
 #!/usr/bin/env python3
 """
 MADONNA Bot — Personal AI Assistant for Beauty & Health
+Version: 2.0.1
 """
 
 import os
 import asyncio
 import datetime
 import logging
-import logging.handlers  # ← ДОБАВИТЬ ЭТУ СТРОКУ!
+import logging.handlers
 import pytz
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-import google.generativeai as genai
-from PIL import Image
-import tempfile
 
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    MessageHandler,
+    filters,
+    ContextTypes,
+    CallbackQueryHandler,
+    ConversationHandler,
+    JobQueue,
+)
+
+# ... остальной код остаётся без изменений ...
 # Настройка логирования
 if not os.path.exists('logs'):
     os.makedirs('logs')
